@@ -253,12 +253,6 @@ local buttons = {{"Продам", "Куплю"},
     {"с э/т", "в п/к", "с м/д"}, 
     {"Бюджет:", "Бюджет: свободный", "Цена:", "Цена: договорная", "/шт"}
 }
-function getAdaptiveX(x)
-	return sizeX * (x / 1920)
-end
-function getAdaptiveY(y)
-	return sizeY * (y / 1080)
-end
 function shuffle_word(word)
     -- Преобразуем слово в таблицу букв
     local letters = {}
@@ -375,8 +369,8 @@ imgui.OnFrame( -- Основное меню /cnnhelp
     function(player)
         imgui.PushFont(font)
         imgui.SetNextWindowPos(imgui.ImVec2((sizeX / 2), (sizeY / 2)), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
-        imgui.SetNextWindowSize(imgui.ImVec2(getAdaptiveX(460), getAdaptiveY(420)))
-        imgui.Begin("CNN Helper | by Rick Ross | "..thisScript().version, window, imgui.WindowFlags.NoCollapse + imgui.WindowFlags.NoResize + imgui.WindowFlags.NoSavedSettings)
+        imgui.SetNextWindowSize(imgui.ImVec2(460, 420))
+        imgui.Begin("CNN Helper | by Rick Ross | "..thisScript().version, window, imgui.WindowFlags.NoCollapse + imgui.WindowFlags.NoResize)
         if imgui.BeginTabBar('##main') then
             if imgui.BeginTabItem('Функции') then
                 if imgui.Button("Музыкальная заставка") then 
@@ -445,10 +439,10 @@ imgui.OnFrame( -- Основное меню /cnnhelp
                 imgui.EndTabItem() 
             end
             if imgui.BeginTabItem('Транспорт') then
-                imgui.PushItemWidth(getAdaptiveX(443))
+                imgui.PushItemWidth(443)
                 imgui.InputTextWithHint('##findcar', 'Поиск', search, ffi.sizeof(search))
                 imgui.PopItemWidth()
-                imgui.BeginChild('##carlist', imgui.ImVec2(getAdaptiveX(443), getAdaptiveY(332)), true)
+                imgui.BeginChild('##carlist', imgui.ImVec2(443, 332), true)
                     if imgui.BeginPopup('##succesmessage', imgui.WindowFlags.NoMove) then
                         imgui.Text('Скопировано в буфер обмена.')
                         imgui.EndPopup()
@@ -473,7 +467,7 @@ imgui.OnFrame( -- Основное меню /cnnhelp
             imgui.EndTabItem()
             end
             if imgui.BeginTabItem('Тюнинг') then
-                imgui.BeginChild('##tunlist', imgui.ImVec2(getAdaptiveX(450), getAdaptiveY(358)), false)
+                imgui.BeginChild('##tunlist', imgui.ImVec2(450, 358), false)
                     if imgui.BeginPopup('##succesmessage', imgui.WindowFlags.NoMove) then
                         imgui.Text('Скопировано в буфер обмена.')
                         imgui.EndPopup()
@@ -492,7 +486,7 @@ imgui.OnFrame( -- Основное меню /cnnhelp
             imgui.EndTabItem()
             end
             if imgui.BeginTabItem('Страны') then
-                imgui.BeginChild('##countries', imgui.ImVec2(getAdaptiveX(450), getAdaptiveY(358)), false)
+                imgui.BeginChild('##countries', imgui.ImVec2(450, 358), false)
                         if imgui.BeginPopup('##succesmessage', imgui.WindowFlags.NoMove) then
                             imgui.Text('Скопировано в буфер обмена.')
                             imgui.EndPopup()
@@ -537,7 +531,7 @@ imgui.OnFrame( -- Меню редактирования объявления
     function(player)
         imgui.PushFont(font)
         imgui.SetNextWindowPos(imgui.ImVec2((sizeX / 2), (sizeY / 2)), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
-        imgui.SetNextWindowSize(imgui.ImVec2(getAdaptiveX(500), getAdaptiveY(220)))
+        imgui.SetNextWindowSize(imgui.ImVec2(500, 220))
         imgui.Begin("Редактирование объявления", adwindow, imgui.WindowFlags.NoCollapse + imgui.WindowFlags.NoResize + imgui.WindowFlags.NoSavedSettings + imgui.WindowFlags.NoTitleBar)
         local w = imgui.GetWindowPos()
         local s = imgui.GetWindowSize()
@@ -548,7 +542,7 @@ imgui.OnFrame( -- Меню редактирования объявления
             adwindow[0] = false
         end
         if imgui.Button("C") then imgui.StrCopy(adinput, "") end imgui.SameLine()
-        imgui.PushItemWidth(getAdaptiveX(373)) imgui.InputText('##adinput', adinput, ffi.sizeof(adinput)) imgui.PopItemWidth() imgui.SameLine()
+        imgui.PushItemWidth(373) imgui.InputText('##adinput', adinput, ffi.sizeof(adinput)) imgui.PopItemWidth() imgui.SameLine()
         if imgui.Button("Отправить") then
             sampSendDialogResponse(3091, 1, 65535, cp(ffi.string(adinput)))
             adwindow[0] = false
@@ -569,7 +563,7 @@ imgui.OnFrame( -- Меню редактирования объявления
         for i, v in pairs(buttons[4]) do
             if imgui.Button(v) then imgui.StrCopy(adinput, ffi.string(adinput)..v) end if i ~= #buttons[4] then imgui.SameLine() end
         end
-        imgui.PushItemWidth(getAdaptiveX(imgui.CalcTextSize("  Введите сумму  ").x)) 
+        imgui.PushItemWidth(imgui.CalcTextSize("  Введите сумму  ").x)
         if imgui.InputTextWithHint('##moneyinput', "Введите сумму", moneyinput, ffi.sizeof(moneyinput)) then
             if ffi.string(moneyinput):find("k") or cp(ffi.string(moneyinput)):find(cp("к")) or ffi.string(moneyinput):find("r") then
                 local number, k = ffi.string(moneyinput):match("(%d+)(.+)")
@@ -595,15 +589,15 @@ imgui.OnFrame( -- Меню редактирования объявления
         if money and imgui.Underline(money.."$", 0xffffffff, 0xFF66CCFF) then
             imgui.StrCopy(adinput, ffi.string(adinput).." "..money.."$")
         end
-        imgui.SetNextWindowPos(imgui.ImVec2((w.x + s.x), (w.y - s.y + getAdaptiveY(35))), imgui.Cond.FirstUseEver)
-        imgui.SetNextWindowSize(imgui.ImVec2(getAdaptiveX(400), getAdaptiveY(405)))
+        imgui.SetNextWindowPos(imgui.ImVec2((w.x + s.x), (w.y - s.y + 35)), imgui.Cond.FirstUseEver)
+        imgui.SetNextWindowSize(imgui.ImVec2(400, 405))
         imgui.Begin("##lists", adwindow, imgui.WindowFlags.NoCollapse + imgui.WindowFlags.NoResize + imgui.WindowFlags.NoSavedSettings + imgui.WindowFlags.NoTitleBar)
         if imgui.BeginTabBar('##label2') then
             if imgui.BeginTabItem('Транспорт') then
-                imgui.PushItemWidth(getAdaptiveX(384))
+                imgui.PushItemWidth(384)
                 imgui.InputTextWithHint('##findcar', 'Поиск', search, ffi.sizeof(search))
                 imgui.PopItemWidth()
-                imgui.BeginChild('##carlist', imgui.ImVec2(getAdaptiveX(384), getAdaptiveY(336)), true)
+                imgui.BeginChild('##carlist', imgui.ImVec2(384, 336), true)
                     if imgui.BeginPopup('##succesmessage', imgui.WindowFlags.NoMove) then
                         imgui.Text('Скопировано в буфер обмена.')
                         imgui.EndPopup()
@@ -626,7 +620,7 @@ imgui.OnFrame( -- Меню редактирования объявления
                 imgui.EndTabItem()
             end
             if imgui.BeginTabItem('Тюнинг') then
-                imgui.BeginChild('##tunlist', imgui.ImVec2(getAdaptiveX(450), getAdaptiveY(358)), false)
+                imgui.BeginChild('##tunlist', imgui.ImVec2(450, 358), false)
                     if imgui.BeginPopup('##succesmessage', imgui.WindowFlags.NoMove) then
                         imgui.Text('Скопировано в буфер обмена.')
                         imgui.EndPopup()
@@ -719,6 +713,10 @@ function onWindowMessage(msg, wparam, lparam)
         elseif wparam == 27 and adwindow[0] and not sampIsChatInputActive() and not sampIsDialogActive() and not isPauseMenuActive() then
             consumeWindowMessage(true, false)
             sampSendDialogResponse(3091, 0, 65535)
+            adwindow[0] = not adwindow[0]
+        elseif wparam == 13 and adwindow[0] and not sampIsChatInputActive() and not sampIsDialogActive() and not isPauseMenuActive() then
+            consumeWindowMessage(true, false)
+            sampSendDialogResponse(3091, 1, 65535)
             adwindow[0] = not adwindow[0]
         end
 	end	
