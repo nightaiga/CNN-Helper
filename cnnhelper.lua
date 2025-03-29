@@ -371,7 +371,7 @@ local bank = 0
 imgui.OnFrame( -- Основное меню /cnnhelp
     function() return window[0] end,
     function(player)
-        imgui.ShowDemoWindow(window)
+        -- imgui.ShowDemoWindow(window)
         imgui.PushFont(font)
         imgui.SetNextWindowPos(imgui.ImVec2((sizeX / 2), (sizeY / 2)), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
         imgui.SetNextWindowSize(imgui.ImVec2(460, 420))
