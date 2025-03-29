@@ -1,7 +1,7 @@
 
 script_author("nightaiga")
 script_name("CNN Helper")
-script_version("v1.0")
+script_version("v1.2")
 
 -- Зависимости
 require 'moonloader'
@@ -9,6 +9,8 @@ local mt = getmetatable("String") function mt.__index:insert(implant, pos)     i
 local imgui = require 'mimgui'
 local sampev = require 'samp.events'
 local effil = require 'effil'
+local vkeys = require 'vkeys'
+local win = require "windows"
 local copas = require 'copas'
 local http = require 'copas.http'
 local requests = require 'requests'
@@ -26,6 +28,7 @@ local shuffleinput = imgui.new.char[128]()
 local moneyinput = imgui.new.char[128]()
 local adinput = imgui.new.char[256]()
 local shuffled = ''
+local dgid = 3100
 local money = nil
 local sizeX, sizeY = getScreenResolution()
 local customcars = {}
@@ -356,6 +359,7 @@ end
 imgui.OnInitialize(function() -- Инициализация MImgui
     cnn() -- Тема
     imgui.GetIO().IniFilename = nil
+    imgui.GetIO().Fonts:Clear()
     local glyph_ranges = imgui.GetIO().Fonts:GetGlyphRangesCyrillic()
     font = imgui.GetIO().Fonts:AddFontFromFileTTF(getFolderPath(0x14)..'\\arialbd.ttf', 14.0, nil, glyph_ranges) -- Шрифт
 end)
@@ -367,14 +371,15 @@ local bank = 0
 imgui.OnFrame( -- Основное меню /cnnhelp
     function() return window[0] end,
     function(player)
+        imgui.ShowDemoWindow(window)
         imgui.PushFont(font)
         imgui.SetNextWindowPos(imgui.ImVec2((sizeX / 2), (sizeY / 2)), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
         imgui.SetNextWindowSize(imgui.ImVec2(460, 420))
-        imgui.Begin("CNN Helper | by Rick Ross | "..thisScript().version, window, imgui.WindowFlags.NoCollapse + imgui.WindowFlags.NoResize)
+        imgui.Begin("CNN Helper | by nightaiga | "..thisScript().version, window, imgui.WindowFlags.NoCollapse + imgui.WindowFlags.NoResize)
         if imgui.BeginTabBar('##main') then
             if imgui.BeginTabItem('Функции') then
                 if imgui.Button("Музыкальная заставка") then 
-                    sampSendChat("/news ..::Музыкальная заставка Cable News Network::..")
+                    sampSendChat(cp"/news ..::Музыкальная заставка Cable News Network::..")
                 end
                 imgui.Separator()
                 imgui.Text("Перемешать слово")
@@ -406,13 +411,19 @@ imgui.OnFrame( -- Основное меню /cnnhelp
                     imgui.Text(v[1].." - "..format_number(v[2]).."$")
                 end
                 imgui.Separator()
-                imgui.PushItemWidth(imgui.CalcTextSize(" Введите ID или часть ник-нейма ").x)
-                    imgui.InputTextWithHint("##competitorsinput", "Введите ID или часть ник-нейма", input, ffi.sizeof(input))
+                imgui.PushItemWidth(imgui.CalcTextSize(" Введите ID или часть никнейма ").x)
+                    imgui.InputTextWithHint("##competitorsinput", "Введите ID или часть никнейма", input, ffi.sizeof(input))
                 imgui.PopItemWidth()
+                if imgui.BeginPopup('##errorfindplayer', imgui.WindowFlags.NoMove) then
+                    imgui.Text('Игрока нет в сети!')
+                    imgui.EndPopup()
+                end
                 if imgui.Button("Ввести") then
                     local id = GetPlayerId(ffi.string(input))
                     if id then
                         table.insert(competitors, {sampGetPlayerNickname(id), 1})
+                    else
+                        imgui.OpenPopup('##errorfindplayer')
                     end
                 end
                 imgui.SameLine()
@@ -531,37 +542,32 @@ imgui.OnFrame( -- Меню редактирования объявления
     function(player)
         imgui.PushFont(font)
         imgui.SetNextWindowPos(imgui.ImVec2((sizeX / 2), (sizeY / 2)), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
-        imgui.SetNextWindowSize(imgui.ImVec2(500, 220))
-        imgui.Begin("Редактирование объявления", adwindow, imgui.WindowFlags.NoCollapse + imgui.WindowFlags.NoResize + imgui.WindowFlags.NoSavedSettings + imgui.WindowFlags.NoTitleBar)
+        imgui.SetNextWindowSize(imgui.ImVec2(500, 212 + imgui.CalcTextSize(ad, nil, nil, 350).y / 2))
+        imgui.Begin("Редактирование объявления", adwindow, imgui.WindowFlags.NoCollapse + imgui.WindowFlags.NoResize + imgui.WindowFlags.NoSavedSettings + imgui.WindowFlags.NoTitleBar + imgui.WindowFlags.NoScrollbar)
         local w = imgui.GetWindowPos()
         local s = imgui.GetWindowSize()
-        imgui.TextDisabled("Исходный текст:") imgui.SameLine() imgui.Text(ad) imgui.SameLine()
+        imgui.TextDisabled("Исходный текст:") 
+        imgui.SameLine()
+        imgui.PushTextWrapPos(450)
+        imgui.Text(ad)
+        imgui.PopTextWrapPos()
+        imgui.SameLine()
         imgui.SetCursorPosX(imgui.GetWindowWidth() - imgui.CalcTextSize(" X ").x - imgui.GetStyle().WindowPadding.x)
         if imgui.Button('X') then
-            sampSendDialogResponse(3091, 0, 65535)
+            sampSendDialogResponse(dgid, 0, 65535)
             adwindow[0] = false
         end
         if imgui.Button("C") then imgui.StrCopy(adinput, "") end imgui.SameLine()
         imgui.PushItemWidth(373) imgui.InputText('##adinput', adinput, ffi.sizeof(adinput)) imgui.PopItemWidth() imgui.SameLine()
         if imgui.Button("Отправить") then
-            sampSendDialogResponse(3091, 1, 65535, cp(ffi.string(adinput)))
+            sampSendDialogResponse(dgid, 1, 65535, cp(ffi.string(adinput)))
             adwindow[0] = false
         end
-        imgui.Separator()
-        for i, v in pairs(buttons[1]) do
-            if imgui.Button(v) then imgui.StrCopy(adinput, ffi.string(adinput)..v.." ") end if i ~= #buttons[1] then imgui.SameLine() end
-        end
-        imgui.Separator()
-        for i, v in pairs(buttons[2]) do
-            if imgui.Button(v) then imgui.StrCopy(adinput, ffi.string(adinput)..v.." ") end if i ~= #buttons[2] then imgui.SameLine() end
-        end
-        imgui.Separator()
-        for i, v in pairs(buttons[3]) do
-            if imgui.Button(v) then imgui.StrCopy(adinput, ffi.string(adinput)..v.." ") end if i ~= #buttons[3] then imgui.SameLine() end
-        end
-        imgui.Separator()
-        for i, v in pairs(buttons[4]) do
-            if imgui.Button(v) then imgui.StrCopy(adinput, ffi.string(adinput)..v) end if i ~= #buttons[4] then imgui.SameLine() end
+        for k = 1, 4 do
+            imgui.Separator()
+            for i, v in pairs(buttons[k]) do
+                if imgui.Button(v) then imgui.StrCopy(adinput, ffi.string(adinput)..v.." ") end if i ~= #buttons[k] then imgui.SameLine() end
+            end
         end
         imgui.PushItemWidth(imgui.CalcTextSize("  Введите сумму  ").x)
         if imgui.InputTextWithHint('##moneyinput', "Введите сумму", moneyinput, ffi.sizeof(moneyinput)) then
@@ -645,8 +651,9 @@ imgui.OnFrame( -- Меню редактирования объявления
 )
 
 function sampev.onShowDialog(dialogid, style, title, button1, button2, text)
-    if dialogid == 3091 and title == cp'{cccccc}** Объявление {ffcc66}CNN' then
+    if title == cp'{cccccc}** Объявление {ffcc66}CNN' then
         ad = cp:decode(text:match(cp'{ff9000}.+%[%d+%]\n{cccccc}Исходный текст объявления:\n(.+)'))
+        dgid = dialogid
         adwindow[0] = true
         imgui.StrCopy(adinput, ad)
         return false
@@ -676,6 +683,32 @@ end
 function main()
 	while not isSampAvailable() do wait(0) end -- Проверка на доступность сампа
 
+    	-- Обработка клавиш (Закрытие на ESC)
+	addEventHandler("onWindowMessage", function(msg, wparam, lparam)
+		if not window[0] or adwindow[0] then
+			return
+		end
+		if (msg == win.msg.WM_KEYDOWN or msg == win.msg.WM_SYSKEYDOWN) then
+			if (wparam == vkeys.VK_ESCAPE and (window[0] or adwindow[0]) and not sampIsChatInputActive() and not sampIsDialogActive() and not isPauseMenuActive()) then
+				consumeWindowMessage(true, false)
+				return
+			end
+		elseif (msg == win.msg.WM_KEYUP or msg == win.msg.WM_SYSKEYUP) then
+			if wparam == vkeys.VK_ESCAPE and window[0] and not sampIsChatInputActive() and not sampIsDialogActive() and not isPauseMenuActive() then
+                consumeWindowMessage(true, false)
+                window[0] = not window[0]
+            elseif wparam == vkeys.VK_ESCAPE and adwindow[0] and not sampIsChatInputActive() and not sampIsDialogActive() and not isPauseMenuActive() then
+                consumeWindowMessage(true, false)
+                sampSendDialogResponse(dgid, 0, 65535)
+                adwindow[0] = not adwindow[0]
+            elseif wparam == vkeys.VK_ENTER and adwindow[0] and not sampIsChatInputActive() and not sampIsDialogActive() and not isPauseMenuActive() then
+                consumeWindowMessage(true, false)
+                sampSendDialogResponse(dgid, 1, 65535, cp(ffi.string(adinput)))
+                adwindow[0] = false
+            end
+		end
+	end)
+
     asyncHttpRequest('GET', 'https://raw.githubusercontent.com/nightaiga/Pears/main/cars.json', nil, -- Запрос на получение списка авто.
 	function(response)
         local result = decodeJson(response.text)
@@ -698,42 +731,25 @@ function main()
 		print('Ошибка при получении списка авто')
 	end)
 
-    sampRegisterChatCommand('cnnhelp', function() -- Регистрация команды на открытие окна
+    sampRegisterChatCommand("cnnhelp", function() -- Регистрация команды на открытие окна
         window[0] = not window[0]
     end)
 
     wait(-1)
 end
 
-function onWindowMessage(msg, wparam, lparam)
-	if msg == 0x100 or msg == 0x101 then
-		if wparam == 27 and window[0] and not sampIsChatInputActive() and not sampIsDialogActive() and not isPauseMenuActive() then
-			consumeWindowMessage(true, false)
-			window[0] = not window[0]
-        elseif wparam == 27 and adwindow[0] and not sampIsChatInputActive() and not sampIsDialogActive() and not isPauseMenuActive() then
-            consumeWindowMessage(true, false)
-            sampSendDialogResponse(3091, 0, 65535)
-            adwindow[0] = not adwindow[0]
-        elseif wparam == 13 and adwindow[0] and not sampIsChatInputActive() and not sampIsDialogActive() and not isPauseMenuActive() then
-            consumeWindowMessage(true, false)
-            sampSendDialogResponse(3091, 1, 65535)
-            adwindow[0] = not adwindow[0]
-        end
-	end	
-end	
-
 function cnn() -- Стиль интерфейса
     local style = imgui.GetStyle();
     local colors = style.Colors;
     style.Alpha = 1;
+    style.WindowTitleAlign = imgui.ImVec2(0.5, 0.5);
     style.WindowPadding = imgui.ImVec2(8.00, 8.00);
     style.WindowRounding = 5;
     style.WindowBorderSize = 1;
     style.WindowMinSize = imgui.ImVec2(32.00, 32.00);
-    style.WindowTitleAlign = imgui.ImVec2(0.00, 0.50);
     style.ChildRounding = 5;
     style.ChildBorderSize = 1;
-    style.PopupRounding = 0;
+    style.PopupRounding = 2;
     style.PopupBorderSize = 1;
     style.FramePadding = imgui.ImVec2(4.00, 3.00);
     style.FrameRounding = 2;
