@@ -8,3 +8,5 @@ _Скрипт для упрощения работы сотрудников Cabl
 ![изображение](https://github.com/user-attachments/assets/f7ab3655-8e89-42fd-af94-452470bdcfc5)
 
 ![изображение](https://github.com/user-attachments/assets/874648bf-8efa-44b7-802a-a11b9334893c)
+
+**Зависимости:** [SAMP.Lua](https://github.com/THE-FYP/SAMP.Lua), [mimgui](https://github.com/THE-FYP/mimgui), [carbJsonConfig](https://github.com/Corenale/carbJsonConfigLua), [Requests](https://github.com/Xkelling/blasthack/raw/main/requests.rar), [Effil](https://www.blast.hk/attachments/19493/)
