@@ -1,7 +1,7 @@
 
 script_author("nightaiga")
 script_name("CNN Helper")
-script_version("v1.2")
+script_version("v1.3")
 
 -- Зависимости
 require 'moonloader'
@@ -15,6 +15,7 @@ local copas = require 'copas'
 local http = require 'copas.http'
 local requests = require 'requests'
 local ffi = require 'ffi'
+local cjc = require "carbJsonConfig"
 encoding = require 'encoding'
 encoding.default = 'UTF-8'
 cp = encoding.CP1251
@@ -28,13 +29,34 @@ local shuffleinput = imgui.new.char[128]()
 local moneyinput = imgui.new.char[128]()
 local adinput = imgui.new.char[256]()
 local shuffled = ''
-local dgid = 3100
 local money = nil
 local sizeX, sizeY = getScreenResolution()
 local customcars = {}
 local tuning = {}
 local sponsors = {}
 local competitors = {}
+local dialog = {
+    edit = 0,
+    choose = 0
+}
+local cfg = {
+    DAY = {
+        ads = 0,
+        money = 0,
+        date = 0,
+    },
+    MONTH = {
+        ads = 0,
+        money = 0,
+        date = 0,
+    },
+    ALLTIME = {
+        ads = 0,
+        money = 0,
+    }
+}
+cjc.load('config\\cnnhelper.json', cfg)
+
 local cars = {"Landstalker", "Bravura", "Buffalo", "Linerunner", "Perrenial", "Sentinel", "Dumper", "Firetruck", "Trashmaster",
 "Stretch", "Manana", "Infernus", "Voodoo", "Pony", "Mule", "Cheetah", "Ambulance", "Leviathan", "Moonbeam",
 "Esperanto", "Taxi", "Washington", "Bobcat", "Whoopee", "BF Injection", "Hunter", "Premier", "Enforcer",
@@ -250,31 +272,11 @@ local countries = {
     {"Ямайка", "Кингстон", "Ямайский доллар"},
     {"Япония", "Токио", "Японская иена"}
 }
-
 local buttons = {{"Продам", "Куплю"},
     {"а/м", "м/ц", "в/т", "с/т", "г/т", "р/с", "а/с", "дом", "предприятие", "квартиру"}, 
     {"с э/т", "в п/к", "с м/д"}, 
     {"Бюджет:", "Бюджет: свободный", "Цена:", "Цена: договорная", "/шт"}
 }
-function shuffle_word(word)
-    -- Преобразуем слово в таблицу букв
-    local letters = {}
-    for letter in word:gmatch(".") do
-        table.insert(letters, letter:upper())
-    end
-    
-    -- Перемешиваем таблицу букв
-    math.randomseed(os.time())
-    for i = #letters, 2, -1 do
-        local j = math.random(i)
-        letters[i], letters[j] = letters[j], letters[i]
-    end
-    
-    -- Соединяем буквы обратно в строку
-    local shuffled_word = table.concat(letters, ". ")
-    
-    return shuffled_word
-end
 
 function asyncHttpRequest(method, url, args, resolve, reject) -- Функция асинхронного запроса
 	local request_thread = effil.thread(function (method, url, args)
@@ -315,7 +317,7 @@ function asyncHttpRequest(method, url, args, resolve, reject) -- Функция 
 	end)
 end
 
-function GetPlayerId(arg)
+function GetPlayerId(arg) -- Функция для получения ID игрока различными спобосами (никнейм, его часть, или ID)
     local id = tonumber(arg)
     local str = 0
 
@@ -345,15 +347,61 @@ function GetPlayerId(arg)
     return str
 end
 
-function imgui.Underline(text, color1, color2) -- Подчеркивание текста
+function imgui.Underline(text) -- Подчеркивание текста
+    local function format(col)
+        local c = col.x * 255  -- b
+        c = bit.bor(c, bit.lshift(col.y * 255, 8))  -- g
+        c = bit.bor(c, bit.lshift(col.z * 255, 16)) -- r
+        c = bit.bor(c, bit.lshift(col.w * 255, 24)) -- a
+        return c
+    end
+
     local tSize = imgui.CalcTextSize(text)
     local p = imgui.GetCursorScreenPos()
     local DL = imgui.GetWindowDrawList()
     if imgui.InvisibleButton("##"..text, tSize) then return true end
-    local color = imgui.IsItemHovered() and color2 or color1
+    local color = imgui.IsItemHovered() and format(imgui.GetStyle().Colors[imgui.Col.TextSelectedBg]) or format(imgui.GetStyle().Colors[imgui.Col.Text])
     
     DL:AddText(p, color, text)
     DL:AddLine(imgui.ImVec2(p.x, p.y + tSize.y), imgui.ImVec2(p.x + tSize.x, p.y + tSize.y), color)
+end
+
+function shuffle_word(word)
+    -- Преобразуем слово в таблицу букв
+    local letters = {}
+    for letter in word:gmatch(".") do
+        table.insert(letters, letter:upper())
+    end
+    
+    -- Перемешиваем таблицу букв
+    math.randomseed(os.time())
+    for i = #letters, 2, -1 do
+        local j = math.random(i)
+        letters[i], letters[j] = letters[j], letters[i]
+    end
+    
+    -- Соединяем буквы обратно в строку
+    local shuffled_word = table.concat(letters, ". ")
+    
+    return shuffled_word
+end
+
+function format_number(num)
+    local formatted = tostring(num)
+    while true do  
+        formatted, k = string.gsub(formatted, "^(-?%d+)(%d%d%d)", '%1.%2')
+        if k == 0 then
+            break
+        end
+    end
+    return formatted
+end
+
+function updateStat(value, type)
+    local t = {"DAY", "MONTH", "ALLTIME"}
+    for _, v in ipairs(t) do
+        cfg[v][type] = cfg[v][type] + value
+    end
 end
 
 imgui.OnInitialize(function() -- Инициализация MImgui
@@ -375,23 +423,34 @@ imgui.OnFrame( -- Основное меню /cnnhelp
         imgui.PushFont(font)
         imgui.SetNextWindowPos(imgui.ImVec2((sizeX / 2), (sizeY / 2)), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
         imgui.SetNextWindowSize(imgui.ImVec2(460, 420))
-        imgui.Begin("CNN Helper | by nightaiga | "..thisScript().version, window, imgui.WindowFlags.NoCollapse + imgui.WindowFlags.NoResize)
+        imgui.Begin(thisScript().name.." | by "..thisScript().authors[1].." | "..thisScript().version, window, imgui.WindowFlags.NoCollapse + imgui.WindowFlags.NoResize)
+        local w = imgui.GetWindowPos()
+        local s = imgui.GetWindowSize()
         if imgui.BeginTabBar('##main') then
             if imgui.BeginTabItem('Функции') then
+                if imgui.BeginPopup('##succesmessage', imgui.WindowFlags.NoMove) then
+                    imgui.Text('Скопировано в буфер обмена.')
+                    imgui.EndPopup()
+                end
                 if imgui.Button("Музыкальная заставка") then 
                     sampSendChat(cp"/news ..::Музыкальная заставка Cable News Network::..")
                 end
+                imgui.SameLine()
+                if imgui.Button("Стоп!") then 
+                    sampSendChat(cp"/news Стоп!")
+                end
                 imgui.Separator()
-                imgui.Text("Перемешать слово")
-                imgui.Separator()
-                imgui.InputText('##shuffle', shuffleinput, ffi.sizeof(shuffleinput)) imgui.SameLine()
+                imgui.PushItemWidth(250)
+                imgui.InputText('##shuffle', shuffleinput, ffi.sizeof(shuffleinput))
+                imgui.PopItemWidth()
+                imgui.SameLine()
                 if imgui.Button('Перемешать') then
                     shuffled = shuffle_word(cp(ffi.string(shuffleinput)))
                 end
-                imgui.Text(cp:decode(shuffled)) imgui.SameLine()
                 if shuffled ~= '' then
-                    if imgui.Button('Скопировать') then
+                    if imgui.Underline(cp:decode(shuffled)) then
                         imgui.SetClipboardText(cp:decode(shuffled))
+                        imgui.OpenPopup("##succesmessage")
                     end
                 else imgui.NewLine() end
                 imgui.Separator()
@@ -430,30 +489,36 @@ imgui.OnFrame( -- Основное меню /cnnhelp
                 if imgui.Button("Очистить") then
                     competitors = {}
                 end
-                for k, v in pairs(competitors) do
-                    if imgui.Button("X##delete"..k) then
-                        competitors[k] = nil
-                    end
-                    imgui.SameLine()
-                    imgui.Text(v[1].." - "..v[2])
-                    imgui.SameLine()
-                    if imgui.Button("-##minus"..k) then
-                        if v[2] > 1 then
-                            v[2] = v[2] - 1
+                imgui.BeginChild("##competitors", imgui.ImVec2(-1, -1), false)
+                    imgui.Columns(3, nil, false)
+                    for k, v in pairs(competitors) do
+                        if imgui.Button("X##delete"..k) then
+                            competitors[k] = nil
                         end
+                        imgui.SetColumnWidth(imgui.GetColumnIndex(), 30)
+                        imgui.NextColumn()
+                        imgui.SetColumnWidth(imgui.GetColumnIndex(), 180)
+                        imgui.Text(v[1].." - "..v[2])
+                        imgui.NextColumn()
+                        if imgui.Button("-##minus"..k) then
+                            if v[2] > 1 then
+                                v[2] = v[2] - 1
+                            end
+                        end
+                        imgui.SameLine()
+                        if imgui.Button("+##plus"..k) then
+                            v[2] = v[2] + 1
+                        end
+                        imgui.NextColumn()
                     end
-                    imgui.SameLine()
-                    if imgui.Button("+##plus"..k) then
-                        v[2] = v[2] + 1
-                    end
-                end
+                imgui.EndChild()
                 imgui.EndTabItem() 
             end
             if imgui.BeginTabItem('Транспорт') then
-                imgui.PushItemWidth(443)
+                imgui.PushItemWidth(-1)
                 imgui.InputTextWithHint('##findcar', 'Поиск', search, ffi.sizeof(search))
                 imgui.PopItemWidth()
-                imgui.BeginChild('##carlist', imgui.ImVec2(443, 332), true)
+                imgui.BeginChild('##carlist', imgui.ImVec2(-1, -1), true)
                     if imgui.BeginPopup('##succesmessage', imgui.WindowFlags.NoMove) then
                         imgui.Text('Скопировано в буфер обмена.')
                         imgui.EndPopup()
@@ -497,37 +562,66 @@ imgui.OnFrame( -- Основное меню /cnnhelp
             imgui.EndTabItem()
             end
             if imgui.BeginTabItem('Страны') then
-                imgui.BeginChild('##countries', imgui.ImVec2(450, 358), false)
-                        if imgui.BeginPopup('##succesmessage', imgui.WindowFlags.NoMove) then
-                            imgui.Text('Скопировано в буфер обмена.')
-                            imgui.EndPopup()
-                        end
-                        imgui.Columns(3)
-                        imgui.Text("Страны")
-                        imgui.NextColumn()
-                        imgui.Text("Столицы")
-                        imgui.NextColumn()
-                        imgui.Text("Валюта")
-                        imgui.Separator()              
-                        for _, v in pairs(countries) do
+                imgui.PushItemWidth(-1)
+                imgui.InputTextWithHint('##findcountry', 'Поиск', search, ffi.sizeof(search))
+                imgui.PopItemWidth()
+                imgui.BeginChild('##countries', imgui.ImVec2(-1, -1), true)
+                    if imgui.BeginPopup('##succesmessage', imgui.WindowFlags.NoMove) then
+                        imgui.Text('Скопировано в буфер обмена.')
+                        imgui.EndPopup()
+                    end
+                    imgui.Columns(3)
+                    imgui.Text("Страны")
+                    imgui.NextColumn()
+                    imgui.Text("Столицы")
+                    imgui.NextColumn()
+                    imgui.Text("Валюта")
+                    imgui.Separator()
+                    for _, v in pairs(countries) do
+                        if cp(v[1]):lower():find(cp(ffi.string(search))) or cp(v[2]):lower():find(cp(ffi.string(search))) or cp(v[3]):lower():find(cp(ffi.string(search))) then
                             imgui.NextColumn()
-                            if imgui.Underline(v[1], 0xffffffff, 0xFF66CCFF) then
+                            if imgui.Underline(v[1]) then
                                 imgui.SetClipboardText(v[1])
                                 imgui.OpenPopup('##succesmessage')
                             end
                             imgui.NextColumn()
-                            if imgui.Underline(v[2], 0xffffffff, 0xFF66CCFF) then
+                            if imgui.Underline(v[2]) then
                                 imgui.SetClipboardText(v[2])
                                 imgui.OpenPopup('##succesmessage')
                             end
                             imgui.NextColumn()
-                            if imgui.Underline(v[3], 0xffffffff, 0xFF66CCFF) then
+                            if imgui.Underline(v[3]) then
                                 imgui.SetClipboardText(v[3])
                                 imgui.OpenPopup('##succesmessage')
                             end
                             imgui.Separator()
                         end
-                    imgui.EndChild()
+                    end
+                imgui.EndChild()
+            imgui.EndTabItem()
+            end
+            if imgui.BeginTabItem('Статистика') then
+                -- TODO: Сделать статистику за неделю.
+                local t = {
+                    {"сегодня", "DAY"},
+                    {"месяц", "MONTH"},
+                    {"всё время", "ALLTIME"}
+                }
+                for k, v in pairs(t) do
+                    imgui.TextDisabled("За "..v[1])
+                    imgui.SameLine()
+                    imgui.SetCursorPosX(s.x - 25)
+                    if imgui.Button("R##"..k) then
+                        cfg[v[2]].ads = 0
+                        cfg[v[2]].money = 0
+                    end
+                    imgui.Text("Объявлений: "..cfg[v[2]].ads)
+                    imgui.Text("Юнитов: "..format_number(cfg[v[2]].money).."$")
+                    if k ~= #t then imgui.Separator() end
+                end
+                if imgui.Button("Сбросить все") then
+                    cfg("reset")
+                end
             imgui.EndTabItem()
             end
         end
@@ -554,29 +648,29 @@ imgui.OnFrame( -- Меню редактирования объявления
         imgui.SameLine()
         imgui.SetCursorPosX(imgui.GetWindowWidth() - imgui.CalcTextSize(" X ").x - imgui.GetStyle().WindowPadding.x)
         if imgui.Button('X') then
-            sampSendDialogResponse(dgid, 0, 65535)
+            sampSendDialogResponse(dialog.edit, 0, 65535)
             adwindow[0] = false
         end
         if imgui.Button("C") then imgui.StrCopy(adinput, "") end imgui.SameLine()
         imgui.PushItemWidth(373) imgui.InputText('##adinput', adinput, ffi.sizeof(adinput)) imgui.PopItemWidth() imgui.SameLine()
         if imgui.Button("Отправить") then
-            sampSendDialogResponse(dgid, 1, 65535, cp(ffi.string(adinput)))
+            sampSendDialogResponse(dialog.edit, 1, 65535, cp(ffi.string(adinput)))
             adwindow[0] = false
         end
         for k = 1, 4 do
             imgui.Separator()
             for i, v in pairs(buttons[k]) do
-                if imgui.Button(v) then imgui.StrCopy(adinput, ffi.string(adinput)..v.." ") end if i ~= #buttons[k] then imgui.SameLine() end
+                if imgui.Button(v) then imgui.StrCopy(adinput, ffi.string(adinput)..v) end if i ~= #buttons[k] then imgui.SameLine() end
             end
         end
         imgui.PushItemWidth(imgui.CalcTextSize("  Введите сумму  ").x)
         if imgui.InputTextWithHint('##moneyinput', "Введите сумму", moneyinput, ffi.sizeof(moneyinput)) then
-            if ffi.string(moneyinput):find("k") or cp(ffi.string(moneyinput)):find(cp("к")) or ffi.string(moneyinput):find("r") then
-                local number, k = ffi.string(moneyinput):match("(%d+)(.+)")
+            if ffi.string(moneyinput):find("k") or cp(ffi.string(moneyinput)):find(cp("к")) or cp(ffi.string(moneyinput)):find(cp("л")) or ffi.string(moneyinput):find("r") then
+                local number, k = ffi.string(moneyinput):match("(%d+%.?%d*)(.+)")
                 if k then
                     local count = 0
                     for i = 1, #k do
-                        if k:sub(i, i) == "k" or k:sub(i, i) == "r" or cp(k):sub(i, i) == cp"к" then
+                        if k:sub(i, i) == "k" or k:sub(i, i) == "r" or cp(k):sub(i, i) == cp"к" or cp(k):sub(i, i) == cp"л" then
                             count = count + 1
                         end
                     end
@@ -592,7 +686,7 @@ imgui.OnFrame( -- Меню редактирования объявления
             end
         end
         imgui.PopItemWidth() imgui.SameLine()
-        if money and imgui.Underline(money.."$", 0xffffffff, 0xFF66CCFF) then
+        if money and imgui.Underline(money.."$") then
             imgui.StrCopy(adinput, ffi.string(adinput).." "..money.."$")
         end
         imgui.SetNextWindowPos(imgui.ImVec2((w.x + s.x), (w.y - s.y + 35)), imgui.Cond.FirstUseEver)
@@ -650,13 +744,23 @@ imgui.OnFrame( -- Меню редактирования объявления
     end
 )
 
-function sampev.onShowDialog(dialogid, style, title, button1, button2, text)
-    if title == cp'{cccccc}** Объявление {ffcc66}CNN' then
+function sampev.onShowDialog(dialogId, style, title, button1, button2, text)
+    if title == cp"{cccccc}** Объявление {ffcc66}CNN" and text:find(cp"{ff9000}.+%[%d+%]\n{cccccc}Исходный текст объявления:\n.+") then
         ad = cp:decode(text:match(cp'{ff9000}.+%[%d+%]\n{cccccc}Исходный текст объявления:\n(.+)'))
-        dgid = dialogid
+        dialog.edit = dialogId
         adwindow[0] = true
         imgui.StrCopy(adinput, ad)
         return false
+    end
+    if title == cp"{cccccc}** Объявления {ffcc66}CNN" and text:find(cp"{ff9000}Отредактировать\n{99ff66}>> Опубликовать\n{ff6347}<< Отклонить") then
+        dialog.choose = dialogId
+    end
+end
+
+function sampev.onSendDialogResponse(dialogId, button, listboxId, input)
+    if dialogId == dialog.choose and button == 1 and listboxId == 1 then
+        updateStat(1, "ads")
+        approvead = true
     end
 end
 
@@ -668,22 +772,21 @@ function sampev.onServerMessage(color, text)
     end
 end
 
-function format_number(num)
-    local formatted = tostring(num)
-    while true do  
-        formatted, k = string.gsub(formatted, "^(-?%d+)(%d%d%d)", '%1.%2')
-        if k == 0 then
-            break
-        end
+function sampev.onDisplayGameText(style, time, text)
+    if text:find("~n~~n~~n~~n~~n~~n~~n~~n~~n~~n~~n~~b~Unit: ~w~%+%d+") and approvead then
+        updateStat(text:match("~n~~n~~n~~n~~n~~n~~n~~n~~n~~n~~n~~b~Unit: ~w~%+(%d+)"), "money")
+        approvead = false
     end
-    return formatted
 end
 
-
 function main()
-	while not isSampAvailable() do wait(0) end -- Проверка на доступность сампа
+	-- Первоначальные проверки: SAMP, Sampfuncs, Сервер
+	if not isSampLoaded() or not isSampfuncsLoaded() then return end
+	while not isSampAvailable() do wait(100) end
+	while sampGetCurrentServerName() == "SA-MP" do wait(0) end
+    if not sampGetCurrentServerName():find("Pears") then thisScript():unload() end
 
-    	-- Обработка клавиш (Закрытие на ESC)
+    -- Обработка клавиш (Закрытие на ESC)
 	addEventHandler("onWindowMessage", function(msg, wparam, lparam)
 		if not window[0] or adwindow[0] then
 			return
@@ -699,11 +802,11 @@ function main()
                 window[0] = not window[0]
             elseif wparam == vkeys.VK_ESCAPE and adwindow[0] and not sampIsChatInputActive() and not sampIsDialogActive() and not isPauseMenuActive() then
                 consumeWindowMessage(true, false)
-                sampSendDialogResponse(dgid, 0, 65535)
+                sampSendDialogResponse(dialog.edit, 0, 65535)
                 adwindow[0] = not adwindow[0]
             elseif wparam == vkeys.VK_ENTER and adwindow[0] and not sampIsChatInputActive() and not sampIsDialogActive() and not isPauseMenuActive() then
                 consumeWindowMessage(true, false)
-                sampSendDialogResponse(dgid, 1, 65535, cp(ffi.string(adinput)))
+                sampSendDialogResponse(dialog.edit, 1, 65535, cp(ffi.string(adinput)))
                 adwindow[0] = false
             end
 		end
@@ -728,14 +831,24 @@ function main()
         end
     end,
     function(err)
-		print('Ошибка при получении списка авто')
+		print('Ошибка при получении списка тюнинга')
 	end)
 
     sampRegisterChatCommand("cnnhelp", function() -- Регистрация команды на открытие окна
         window[0] = not window[0]
     end)
 
-    wait(-1)
+    while true do wait(0)
+        local date = os.date("*t")
+        local t = {"DAY", "MONTH"}
+        for _, v in ipairs(t) do
+            if cfg[v].date ~= date[v:lower()] then
+                cfg[v].ads = 0
+                cfg[v].money = 0
+                cfg[v].date = date[v:lower()]
+            end
+        end
+    end
 end
 
 function cnn() -- Стиль интерфейса
@@ -806,10 +919,16 @@ function cnn() -- Стиль интерфейса
     colors[imgui.Col.PlotLinesHovered] = imgui.ImVec4(1.00, 0.43, 0.35, 1.00);
     colors[imgui.Col.PlotHistogram] = imgui.ImVec4(0.90, 0.70, 0.00, 1.00);
     colors[imgui.Col.PlotHistogramHovered] = imgui.ImVec4(1.00, 0.60, 0.00, 1.00);
-    colors[imgui.Col.TextSelectedBg] = imgui.ImVec4(1.00, 0.80, 0.40, 0.67);
+    colors[imgui.Col.TextSelectedBg] = imgui.ImVec4(1.00, 0.80, 0.40, 1.00);
     colors[imgui.Col.DragDropTarget] = imgui.ImVec4(1.00, 1.00, 0.00, 0.90);
     colors[imgui.Col.NavHighlight] = imgui.ImVec4(0.26, 0.59, 0.98, 1.00);
     colors[imgui.Col.NavWindowingHighlight] = imgui.ImVec4(1.00, 1.00, 1.00, 0.70);
     colors[imgui.Col.NavWindowingDimBg] = imgui.ImVec4(0.80, 0.80, 0.80, 0.20);
     colors[imgui.Col.ModalWindowDimBg] = imgui.ImVec4(0.80, 0.80, 0.80, 0.35);
+end
+
+function onScriptTerminate(script, quitGame)
+    if script == thisScript() then
+		cfg()
+    end
 end
