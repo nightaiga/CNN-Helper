@@ -1,7 +1,6 @@
-
 script_author("nightaiga")
 script_name("CNN Helper")
-script_version("v1.3")
+script_version("v1.4 (Final)")
 
 -- Зависимости
 require 'moonloader'
@@ -19,7 +18,6 @@ local cjc = require "carbJsonConfig"
 encoding = require 'encoding'
 encoding.default = 'UTF-8'
 cp = encoding.CP1251
-cp1252 = encoding.CP1252
 u8 = encoding.UTF8
 
 -- Переменные
@@ -31,6 +29,8 @@ local adinput = imgui.new.char[256]()
 local shuffled = ''
 local money = nil
 local sizeX, sizeY = getScreenResolution()
+local cars = {}
+local carkeys = {}
 local customcars = {}
 local tuning = {}
 local sponsors = {}
@@ -57,28 +57,30 @@ local cfg = {
 }
 cjc.load('config\\cnnhelper.json', cfg)
 
-local cars = {"Landstalker", "Bravura", "Buffalo", "Linerunner", "Perrenial", "Sentinel", "Dumper", "Firetruck", "Trashmaster",
-"Stretch", "Manana", "Infernus", "Voodoo", "Pony", "Mule", "Cheetah", "Ambulance", "Leviathan", "Moonbeam",
-"Esperanto", "Taxi", "Washington", "Bobcat", "Whoopee", "BF Injection", "Hunter", "Premier", "Enforcer",
-"Securicar", "Banshee", "Predator", "Bus", "Rhino", "Barracks", "Hotknife", "Trailer", "Previon", "Coach",
-"Cabbie", "Stallion", "Rumpo", "RC Bandit", "Romero", "Packer", "Monster A", "Admiral", "Squalo", "Seasparrow",
-"Pizzaboy", "Tram", "Trailer", "Turismo", "Speeder", "Reefer", "Tropic", "Flatbed", "Yankee", "Caddy", "Solair",
-"Topfun Van", "Skimmer", "PCJ-600", "Faggio", "Freeway", "RC Baron", "RC Raider", "Glendale", "Oceanic",
-"Sanchez", "Sparrow", "Patriot", "Quad", "Coastguard", "Dinghy", "Hermes", "Sabre", "Rustler", "ZR-350", "Walton",
-"Regina", "Comet", "BMX", "Burrito", "Camper", "Marquis", "Baggage", "Dozer", "Maverick", "News Chopper", "Rancher",
-"FBI Rancher", "Virgo", "Greenwood", "Jetmax", "Hotring", "Sandking", "Blista Compact", "Police Maverick",
-"Boxville", "Benson", "Mesa", "RC Goblin", "Hotring Racer A", "Hotring Racer B", "Bloodring Banger", "Rancher",
-"Super GT", "Elegant", "Journey", "Bike", "Mountain Bike", "Beagle", "Cropduster", "Stunt", "Tanker", "Roadtrain",
-"Nebula", "Majestic", "Buccaneer", "Shamal", "Hydra", "FCR-900", "NRG-500", "HPV1000", "Cement Truck", "Tow Truck",
-"Fortune", "Cadrona", "APC", "Willard", "Forklift", "Tractor", "Combine", "Feltzer", "Remington", "Slamvan",
-"Blade", "Freight", "Streak", "Vortex", "Vincent", "Bullet", "Clover", "Sadler", "Firetruck", "Hustler", "Intruder",
-"Primo", "Cargobob", "Tampa", "Sunrise", "Merit", "Utility", "Nevada", "Yosemite", "Windsor", "Monster B", "Monster C",
-"Uranus", "Jester", "Sultan", "Stratum", "Elegy", "Raindance", "RC Tiger", "Flash", "Tahoma", "Savanna", "Bandito",
-"Freight Flat", "Streak Carriage", "Kart", "Mower", "Dune", "Sweeper", "Broadway", "Tornado", "AT 400", "DFT 30",
-"Huntley", "Stafford", "BF 400", "News Van", "Tug", "Trailer", "Emperor", "Wayfarer", "Euros", "Hotdog", "Club",
-"Freight Box", "Trailer", "Andromada", "Dodo", "RC Cam", "Launch", "Police Car", "Police Car", "Police Car",
-"Police Ranger", "Picador", "S.W.A.T", "Alpha", "Phoenix", "Glendale", "Sadler", "Luggage", "Luggage", "Stairs",
-"Boxville", "Tiller", "Utility Trailer"}
+local vanilacars = {
+    "Landstalker", "Bravura", "Buffalo", "Linerunner", "Perrenial", "Sentinel", "Dumper", "Firetruck", "Trashmaster",
+    "Stretch", "Manana", "Infernus", "Voodoo", "Pony", "Mule", "Cheetah", "Ambulance", "Leviathan", "Moonbeam",
+    "Esperanto", "Taxi", "Washington", "Bobcat", "Whoopee", "BF Injection", "Hunter", "Premier", "Enforcer",
+    "Securicar", "Banshee", "Predator", "Bus", "Rhino", "Barracks", "Hotknife", "Trailer", "Previon", "Coach",
+    "Cabbie", "Stallion", "Rumpo", "RC Bandit", "Romero", "Packer", "Monster A", "Admiral", "Squalo", "Seasparrow",
+    "Pizzaboy", "Tram", "Trailer", "Turismo", "Speeder", "Reefer", "Tropic", "Flatbed", "Yankee", "Caddy", "Solair",
+    "Topfun Van", "Skimmer", "PCJ-600", "Faggio", "Freeway", "RC Baron", "RC Raider", "Glendale", "Oceanic",
+    "Sanchez", "Sparrow", "Patriot", "Quad", "Coastguard", "Dinghy", "Hermes", "Sabre", "Rustler", "ZR-350", "Walton",
+    "Regina", "Comet", "BMX", "Burrito", "Camper", "Marquis", "Baggage", "Dozer", "Maverick", "News Chopper", "Rancher",
+    "FBI Rancher", "Virgo", "Greenwood", "Jetmax", "Hotring", "Sandking", "Blista Compact", "Police Maverick",
+    "Boxville", "Benson", "Mesa", "RC Goblin", "Hotring Racer A", "Hotring Racer B", "Bloodring Banger", "Rancher",
+    "Super GT", "Elegant", "Journey", "Bike", "Mountain Bike", "Beagle", "Cropduster", "Stunt", "Tanker", "Roadtrain",
+    "Nebula", "Majestic", "Buccaneer", "Shamal", "Hydra", "FCR-900", "NRG-500", "HPV1000", "Cement Truck", "Tow Truck",
+    "Fortune", "Cadrona", "APC", "Willard", "Forklift", "Tractor", "Combine", "Feltzer", "Remington", "Slamvan",
+    "Blade", "Freight", "Streak", "Vortex", "Vincent", "Bullet", "Clover", "Sadler", "Firetruck", "Hustler", "Intruder",
+    "Primo", "Cargobob", "Tampa", "Sunrise", "Merit", "Utility", "Nevada", "Yosemite", "Windsor", "Monster B", "Monster C",
+    "Uranus", "Jester", "Sultan", "Stratum", "Elegy", "Raindance", "RC Tiger", "Flash", "Tahoma", "Savanna", "Bandito",
+    "Freight Flat", "Streak Carriage", "Kart", "Mower", "Dune", "Sweeper", "Broadway", "Tornado", "AT 400", "DFT 30",
+    "Huntley", "Stafford", "BF 400", "News Van", "Tug", "Trailer", "Emperor", "Wayfarer", "Euros", "Hotdog", "Club",
+    "Freight Box", "Trailer", "Andromada", "Dodo", "RC Cam", "Launch", "Police Car", "Police Car", "Police Car",
+    "Police Ranger", "Picador", "S.W.A.T", "Alpha", "Phoenix", "Glendale", "Sadler", "Luggage", "Luggage", "Stairs",
+    "Boxville", "Tiller", "Utility Trailer"
+}
 local countries = {
     {"Австралия", "Канберра", "Австралийский доллар"},
     {"Австрия", "Вена", "Евро"},
@@ -272,7 +274,8 @@ local countries = {
     {"Ямайка", "Кингстон", "Ямайский доллар"},
     {"Япония", "Токио", "Японская иена"}
 }
-local buttons = {{"Продам", "Куплю"},
+local buttons = {
+    {"Продам", "Куплю"},
     {"а/м", "м/ц", "в/т", "с/т", "г/т", "р/с", "а/с", "дом", "предприятие", "квартиру"}, 
     {"с э/т", "в п/к", "с м/д"}, 
     {"Бюджет:", "Бюджет: свободный", "Цена:", "Цена: договорная", "/шт"}
@@ -366,6 +369,11 @@ function imgui.Underline(text) -- Подчеркивание текста
     DL:AddLine(imgui.ImVec2(p.x, p.y + tSize.y), imgui.ImVec2(p.x + tSize.x, p.y + tSize.y), color)
 end
 
+function imgui.CenterColumnText(text) -- Центрирование текста в таблице
+    imgui.SetCursorPosX((imgui.GetColumnOffset() + (imgui.GetColumnWidth() / 2)) - imgui.CalcTextSize(text).x / 2)
+    imgui.Text(text)
+end
+
 function shuffle_word(word)
     -- Преобразуем слово в таблицу букв
     local letters = {}
@@ -407,14 +415,54 @@ end
 imgui.OnInitialize(function() -- Инициализация MImgui
     cnn() -- Тема
     imgui.GetIO().IniFilename = nil
+    local glyph_ranges = imgui.GetIO().Fonts.ConfigData.Data[0].GlyphRanges
     imgui.GetIO().Fonts:Clear()
-    local glyph_ranges = imgui.GetIO().Fonts:GetGlyphRangesCyrillic()
     font = imgui.GetIO().Fonts:AddFontFromFileTTF(getFolderPath(0x14)..'\\arialbd.ttf', 14.0, nil, glyph_ranges) -- Шрифт
 end)
 
 local search = imgui.new.char[256]()
 local input = imgui.new.char[128]()
 local bank = 0
+
+function CarList(ad)
+    imgui.PushItemWidth(-1)
+    imgui.InputTextWithHint('##findcar', 'Поиск', search, ffi.sizeof(search))
+    imgui.PopItemWidth()
+    imgui.BeginChild('##carlist', imgui.ImVec2(-1, -1), true)
+        if imgui.BeginPopup('##succesmessage', imgui.WindowFlags.NoMove) then
+            imgui.Text('Скопировано в буфер обмена.')
+            imgui.EndPopup()
+        end
+        for _, k in pairs(carkeys) do
+            local v = cars[k]
+            if cp(v):lower():find(cp(ffi.string(search))) or tostring(k):find(ffi.string(search)) then
+                if imgui.Selectable('[ '..(k)..' ] '..v) then
+                    if not ad then imgui.SetClipboardText(v) else imgui.StrCopy(adinput, ffi.string(adinput)..v.." ") end
+                    imgui.OpenPopup('##succesmessage')
+                end
+            end
+        end
+    imgui.EndChild()
+end
+
+function TuningList(ad)
+    imgui.BeginChild('##tunlist', imgui.ImVec2(-1, -1), true)
+        if imgui.BeginPopup('##succesmessage', imgui.WindowFlags.NoMove) then
+            imgui.Text('Скопировано в буфер обмена.')
+            imgui.EndPopup()
+        end
+        for k, v in pairs(tuning) do
+            imgui.TextDisabled(k)
+            for i = 1, #v do
+                if imgui.Selectable(v[i]) then
+                    if not ad then imgui.SetClipboardText(v[i]) else imgui.StrCopy(adinput, ffi.string(adinput)..v[i].." ") end
+                    imgui.OpenPopup('##succesmessage')
+                end
+            end
+            if #k ~= 16 then imgui.Separator() end
+        end
+    imgui.EndChild()
+end
 
 imgui.OnFrame( -- Основное меню /cnnhelp
     function() return window[0] end,
@@ -490,7 +538,7 @@ imgui.OnFrame( -- Основное меню /cnnhelp
                     competitors = {}
                 end
                 imgui.BeginChild("##competitors", imgui.ImVec2(-1, -1), false)
-                    imgui.Columns(3, nil, false)
+                    imgui.Columns(4, nil, false)
                     for k, v in pairs(competitors) do
                         if imgui.Button("X##delete"..k) then
                             competitors[k] = nil
@@ -498,11 +546,16 @@ imgui.OnFrame( -- Основное меню /cnnhelp
                         imgui.SetColumnWidth(imgui.GetColumnIndex(), 30)
                         imgui.NextColumn()
                         imgui.SetColumnWidth(imgui.GetColumnIndex(), 180)
-                        imgui.Text(v[1].." - "..v[2])
+                        imgui.CenterColumnText(v[1])
+                        imgui.NextColumn()
+                        imgui.SetColumnWidth(imgui.GetColumnIndex(), 30)
+                        imgui.CenterColumnText(tostring(v[2]))
                         imgui.NextColumn()
                         if imgui.Button("-##minus"..k) then
                             if v[2] > 1 then
                                 v[2] = v[2] - 1
+                            else
+                                competitors[k] = nil
                             end
                         end
                         imgui.SameLine()
@@ -515,50 +568,11 @@ imgui.OnFrame( -- Основное меню /cnnhelp
                 imgui.EndTabItem() 
             end
             if imgui.BeginTabItem('Транспорт') then
-                imgui.PushItemWidth(-1)
-                imgui.InputTextWithHint('##findcar', 'Поиск', search, ffi.sizeof(search))
-                imgui.PopItemWidth()
-                imgui.BeginChild('##carlist', imgui.ImVec2(-1, -1), true)
-                    if imgui.BeginPopup('##succesmessage', imgui.WindowFlags.NoMove) then
-                        imgui.Text('Скопировано в буфер обмена.')
-                        imgui.EndPopup()
-                    end
-                    for k, v in pairs(cars) do
-                        if v:lower():find(cp(ffi.string(search))) or tostring(k+399):find(cp(ffi.string(search))) then
-                            if imgui.Selectable('[ '..(k+399)..' ] '..cp:decode(v)) then
-                                imgui.SetClipboardText(v)
-                                imgui.OpenPopup('##succesmessage')
-                            end
-                        end
-                    end
-                    for k, v in pairs(customcars) do
-                        if v:lower():find(cp(ffi.string(search))) or tostring(k+1999):find(cp(ffi.string(search))) then
-                            if imgui.Selectable('[ '..(k+1999)..' ] '..cp:decode(v)) then
-                                imgui.SetClipboardText(cp:decode(v))
-                                imgui.OpenPopup('##succesmessage')
-                            end
-                        end
-                    end
-                imgui.EndChild()
+                CarList()
             imgui.EndTabItem()
             end
             if imgui.BeginTabItem('Тюнинг') then
-                imgui.BeginChild('##tunlist', imgui.ImVec2(450, 358), false)
-                    if imgui.BeginPopup('##succesmessage', imgui.WindowFlags.NoMove) then
-                        imgui.Text('Скопировано в буфер обмена.')
-                        imgui.EndPopup()
-                    end
-                    for k, v in pairs(tuning) do
-                        imgui.TextDisabled(k)
-                        for i = 1, #v do
-                            if imgui.Selectable(v[i]) then
-                                imgui.SetClipboardText(v[i])
-                                imgui.OpenPopup('##succesmessage')
-                            end
-                        end
-                        if #k ~= 16 then imgui.Separator() end
-                    end
-                    imgui.EndChild()
+                TuningList()
             imgui.EndTabItem()
             end
             if imgui.BeginTabItem('Страны') then
@@ -601,7 +615,6 @@ imgui.OnFrame( -- Основное меню /cnnhelp
             imgui.EndTabItem()
             end
             if imgui.BeginTabItem('Статистика') then
-                -- TODO: Сделать статистику за неделю.
                 local t = {
                     {"сегодня", "DAY"},
                     {"месяц", "MONTH"},
@@ -652,15 +665,23 @@ imgui.OnFrame( -- Меню редактирования объявления
             adwindow[0] = false
         end
         if imgui.Button("C") then imgui.StrCopy(adinput, "") end imgui.SameLine()
-        imgui.PushItemWidth(373) imgui.InputText('##adinput', adinput, ffi.sizeof(adinput)) imgui.PopItemWidth() imgui.SameLine()
+        imgui.PushItemWidth(373) 
+        imgui.InputText('##adinput', adinput, ffi.sizeof(adinput))
+        imgui.PopItemWidth() 
+        imgui.SameLine()
         if imgui.Button("Отправить") then
             sampSendDialogResponse(dialog.edit, 1, 65535, cp(ffi.string(adinput)))
             adwindow[0] = false
         end
-        for k = 1, 4 do
+        for k = 1, #buttons do
             imgui.Separator()
             for i, v in pairs(buttons[k]) do
-                if imgui.Button(v) then imgui.StrCopy(adinput, ffi.string(adinput)..v) end if i ~= #buttons[k] then imgui.SameLine() end
+                if imgui.Button(v) then
+                    imgui.StrCopy(adinput, ffi.string(adinput)..v)
+                end 
+                if i ~= #buttons[k] then 
+                    imgui.SameLine() 
+                end
             end
         end
         imgui.PushItemWidth(imgui.CalcTextSize("  Введите сумму  ").x)
@@ -689,52 +710,15 @@ imgui.OnFrame( -- Меню редактирования объявления
         if money and imgui.Underline(money.."$") then
             imgui.StrCopy(adinput, ffi.string(adinput).." "..money.."$")
         end
-        imgui.SetNextWindowPos(imgui.ImVec2((w.x + s.x), (w.y - s.y + 35)), imgui.Cond.FirstUseEver)
+        imgui.SetNextWindowPos(imgui.ImVec2((w.x + s.x), (w.y - s.y + 33)), imgui.Cond.FirstUseEver)
         imgui.SetNextWindowSize(imgui.ImVec2(400, 405))
         imgui.Begin("##lists", adwindow, imgui.WindowFlags.NoCollapse + imgui.WindowFlags.NoResize + imgui.WindowFlags.NoSavedSettings + imgui.WindowFlags.NoTitleBar)
         if imgui.BeginTabBar('##label2') then
             if imgui.BeginTabItem('Транспорт') then
-                imgui.PushItemWidth(384)
-                imgui.InputTextWithHint('##findcar', 'Поиск', search, ffi.sizeof(search))
-                imgui.PopItemWidth()
-                imgui.BeginChild('##carlist', imgui.ImVec2(384, 336), true)
-                    if imgui.BeginPopup('##succesmessage', imgui.WindowFlags.NoMove) then
-                        imgui.Text('Скопировано в буфер обмена.')
-                        imgui.EndPopup()
-                    end
-                    for k, v in pairs(cars) do
-                        if v:lower():find(cp(ffi.string(search))) or tostring(k+399):find(cp(ffi.string(search))) then
-                            if imgui.Selectable('[ '..(k+399)..' ] '..cp:decode(v)) then
-                                imgui.StrCopy(adinput, ffi.string(adinput)..v.." ")
-                            end
-                        end
-                    end
-                    for k, v in pairs(customcars) do
-                        if v:lower():find(cp(ffi.string(search))) or tostring(k+1999):find(cp(ffi.string(search))) then
-                            if imgui.Selectable('[ '..(k+1999)..' ] '..cp:decode(v)) then
-                                imgui.StrCopy(adinput, ffi.string(adinput)..cp:decode(v).." ")
-                            end
-                        end
-                    end
-                imgui.EndChild()
-                imgui.EndTabItem()
+                CarList(true)
             end
             if imgui.BeginTabItem('Тюнинг') then
-                imgui.BeginChild('##tunlist', imgui.ImVec2(450, 358), false)
-                    if imgui.BeginPopup('##succesmessage', imgui.WindowFlags.NoMove) then
-                        imgui.Text('Скопировано в буфер обмена.')
-                        imgui.EndPopup()
-                    end
-                    for k, v in pairs(tuning) do
-                        imgui.TextDisabled(k)
-                        for i = 1, #v do
-                            if imgui.Selectable(v[i]) then
-                                imgui.StrCopy(adinput, ffi.string(adinput)..v[i].." ")
-                            end
-                        end
-                        if #k ~= 16 then imgui.Separator() end
-                    end
-                    imgui.EndChild()
+                TuningList(true)
             imgui.EndTabItem()
             end
         imgui.EndTabBar()
@@ -779,6 +763,18 @@ function sampev.onDisplayGameText(style, time, text)
     end
 end
 
+function compareCarTables()
+    for k, v in pairs(vanilacars) do
+        table.insert(cars, k+399, v)
+        table.insert(carkeys, k+399)
+    end
+    for k, v in pairs(customcars) do
+        table.insert(cars, k+1999, v)
+        table.insert(carkeys, k+1999)
+    end
+    table.sort(carkeys)
+end
+
 function main()
 	-- Первоначальные проверки: SAMP, Sampfuncs, Сервер
 	if not isSampLoaded() or not isSampfuncsLoaded() then return end
@@ -812,6 +808,44 @@ function main()
 		end
 	end)
 
+    local function json(filePath)
+        local f = {}
+
+        if not doesFileExist(filePath) then
+            print("File "..filePath:match("([^/]+)$").."doesn't exist!")
+            return false
+        end
+        
+        function f:read()
+            local f = io.open(filePath, "r+")
+            local jsonInString = f:read("*a")
+            f:close()
+            local jsonTable = decodeJson(jsonInString)
+            return jsonTable
+        end
+        
+        function f:write(t)
+            f = io.open(filePath, "w")
+            f:write(encodeJson(t))
+            f:flush()
+            f:close()
+        end
+
+        return f
+    end
+    
+    if json(getWorkingDirectory().."/config/CNN Helper/cars.json") then
+        for _, v in pairs(json(getWorkingDirectory().."/config/CNN Helper/cars.json"):read()) do
+            table.insert(customcars, v)
+        end
+    end
+    if json(getWorkingDirectory().."/config/CNN Helper/tun.json") then
+        for k, v in pairs(json(getWorkingDirectory().."/config/CNN Helper/tun.json"):read()) do
+            tuning[k] = v
+        end
+    end
+
+    --[[ Функции для глобального получения списков
     asyncHttpRequest('GET', 'https://raw.githubusercontent.com/nightaiga/Pears/main/cars.json', nil, -- Запрос на получение списка авто.
 	function(response)
         local result = decodeJson(response.text)
@@ -832,7 +866,9 @@ function main()
     end,
     function(err)
 		print('Ошибка при получении списка тюнинга')
-	end)
+	end)]]
+
+    compareCarTables()
 
     sampRegisterChatCommand("cnnhelp", function() -- Регистрация команды на открытие окна
         window[0] = not window[0]

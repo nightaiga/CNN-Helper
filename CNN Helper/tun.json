@@ -1,0 +1,30 @@
+{
+  "Двигатель": [
+    "AROSPEED",
+    "SkunkRacer",
+    "Venom",
+    "DC Sports",
+    "Philin Customs"
+  ],
+  "Трансмиссия": [
+    "ACT",
+    "Clutch Masters",
+    "Jacson Raceing",
+    "HPRacing"
+  ],
+  "Подвеска": [
+    "Ibach Springs",
+    "KONI suspension",
+    "BILSTEIN"
+  ],
+  "Шины": [
+    "YKOHAMA",
+    "TOYO",
+    "Falken Tire"
+  ],
+  "Тормоза": [
+    "KVR Performance",
+    "Brembo",
+    "Wilwood"
+  ]
+}
