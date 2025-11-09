@@ -1,4 +1,4 @@
-_Скрипт для упрощения работы сотрудников Cable News Network на Pears Project (https://pears.fun)_
+_Скрипт для упрощения работы сотрудников Cable News Network на [Pears Project](https://github.com/moreveal/pears)_
 
 **Особенности:**
 - Новый диалог редактирования объявлений с кнопками и просмотром всего списка авто 
